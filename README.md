@@ -3,7 +3,10 @@ Create Azure AD App and Custom IAM Role. Valtix Controller uses the App to manag
 
 # Usage
 ```
-./azure-setup.sh <prefix>
+bash azure-setup.sh -h
+Usage: azure-setup.sh [args]
+-h This help message
+-p <prefix> - Prefix to use for the App and IAM Role, defaults to valtix
 ```
 
 The script creates AD App with <prefix>-valtix-controller-app and a custom IAM Role <prefix>-valtix-controller-role. It uses the default subscription to setup the scopes for the role. If you need to setup the scopes for a different subscription, change it on your shell before running the script.
