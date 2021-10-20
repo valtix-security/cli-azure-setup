@@ -9,7 +9,7 @@ Usage: azure-setup.sh [args]
 -p <prefix> - Prefix to use for the App and IAM Role, defaults to valtix
 ```
 
-The script creates AD App with <prefix>-valtix-controller-app and a custom IAM Role <prefix>-valtix-controller-role. It uses the default subscription to setup the scopes for the role. If you need to setup the scopes for a different subscription, change it on your shell before running the script.
+The script creates AD App with \<prefix\>-valtix-controller-app and a custom IAM Role \<prefix\>-valtix-controller-role. It uses the default subscription to setup the scopes for the role. If you need to setup the scopes for a different subscription, change it on your shell before running the script.
 
 The following commands can be used to change the active subscription
 
