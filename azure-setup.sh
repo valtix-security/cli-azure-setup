@@ -20,6 +20,23 @@ while getopts "hp:" optname; do
     esac
 done
 
+test=$(az account list | jq '.[] | .name')
+printf "Select your subscription:\n"
+IFS=$'\n'
+num=0
+subscription=($test)
+for i in $test
+do
+        echo "($num) $i"
+        num=$(( $num + 1 ))
+done
+num=$(($num-1))
+read -p "Enter number from 0 - $num.  " yn
+printf "You selected ${subscription[$yn]}\n"
+
+echo "az account set --subscription ${subscription[$yn]} --only-show-errors"
+az account show
+
 APP_NAME=$PREFIX-vtxcontroller-app
 ROLE_NAME=$PREFIX-vtxcontroller-role
 
@@ -93,9 +110,12 @@ echo "az ad app delete --id $app_id" >> $cleanup_file
 echo "rm $cleanup_file" >> $cleanup_file
 chmod +x $cleanup_file
 
-echo ""
+echo "################################################################################"
+echo "## Below information will be needed to onboard subscription to Valtix Controller"
+echo "################################################################################"
 echo "Tenant/Directory: $tenant_id"
 echo "Subscription: $sub_id"
 echo "App: $app_id"
 echo "Secret: $secret"
+echo "################################################################################"
 echo ""
