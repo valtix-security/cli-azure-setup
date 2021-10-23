@@ -20,22 +20,33 @@ while getopts "hp:" optname; do
     esac
 done
 
-test=$(az account list | jq '.[] | .name')
-printf "Select your subscription:\n"
-IFS=$'\n'
-num=0
-subscription=($test)
-for i in $test
-do
-        echo "($num) $i"
-        num=$(( $num + 1 ))
-done
-num=$(($num-1))
-read -p "Enter number from 0 - $num.  " yn
-printf "You selected ${subscription[$yn]}\n"
+curr_subscription_name=$(az account show | jq .name)
+curr_subscription_id=$(az account show | jq .id)
+echo "Your current subscription is ${curr_subscription_name} / ${curr_subscription_id}"
+read -p "Is this the subscription you want to onboard to Valtix? [y/n]  " answer
 
-echo "az account set --subscription ${subscription[$yn]} --only-show-errors"
-az account show
+if [[ $answer == "n" ]]; then
+  all_sub=$(az account list)
+  sub_list=$(echo $all_sub | jq '.[] | .name')
+  tmp_id_list=$(echo $all_sub | jq '.[] | .id')
+  id_list=($tmp_id_list)
+  printf "Select your subscription:\n"
+  IFS=$'\n'
+  num=0
+  subscription=($test)
+  for i in $sub_list
+  do
+          echo "($num) $i / ${id_list[$num]}"
+          num=$(( $num + 1 ))
+  done
+  num=$(($num-1))
+  read -p "Enter number from 0 - $num.  " sub_selection
+  printf "You selected ${subscription[$sub_selection]} with ID ${id_list[$sub_selection]}\n"
+
+  az account set --subscription $(echo ${id_list[$sub_selection]} | sed 's/"//g' ) --only-show-errors
+  unset IFS
+fi
+
 
 APP_NAME=$PREFIX-vtxcontroller-app
 ROLE_NAME=$PREFIX-vtxcontroller-role
