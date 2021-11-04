@@ -20,47 +20,47 @@ while getopts "hp:" optname; do
     esac
 done
 
-curr_subscription_name=$(az account show | jq .name)
-curr_subscription_id=$(az account show | jq .id)
-echo "Your current subscription is ${curr_subscription_name} / ${curr_subscription_id}"
-read -p "Is this the subscription you want to onboard to Valtix? [y/n]  " answer
+account_info=$(az account show)
+sub_name=$(echo $account_info | jq -r .name)
+sub_id=$(echo $account_info | jq -r .id)
 
-if [[ $answer == "n" ]]; then
-  all_sub=$(az account list)
-  sub_list=$(echo $all_sub | jq '.[] | .name')
-  tmp_id_list=$(echo $all_sub | jq '.[] | .id')
-  id_list=($tmp_id_list)
-  printf "Select your subscription:\n"
-  IFS=$'\n'
-  num=0
-  subscription=($test)
-  for i in $sub_list
-  do
-          echo "($num) $i / ${id_list[$num]}"
-          num=$(( $num + 1 ))
-  done
-  num=$(($num-1))
-  read -p "Enter number from 0 - $num.  " sub_selection
-  printf "You selected ${subscription[$sub_selection]} with ID ${id_list[$sub_selection]}\n"
+echo "Your current subscription is ${sub_name} / ${sub_id}"
+read -p "Is this the subscription you want to onboard to Valtix? [y/n] " -n 1
 
-  az account set --subscription $(echo ${id_list[$sub_selection]} | sed 's/"//g' ) --only-show-errors
-  unset IFS
+if [ "$REPLY" == "n" ]; then
+    all_sub=$(az account list)
+    sub_list=$(echo $all_sub | jq -r '.[].name')
+    tmp_id_list=$(echo $all_sub | jq -r '.[].id')
+    id_list=($tmp_id_list)
+    echo "Select your subscription:"
+    IFS=$'\n'
+    num=0
+    for i in $sub_list; do
+        echo "($num) $i / ${id_list[$num]}"
+        num=$(( $num + 1 ))
+    done
+    num=$(($num-1))
+    read -p "Enter number from 0 - $num: " sub_selection
+    tmp_sub_list=($sub_list)
+    echo "Setting the subscription to ${tmp_sub_list[$sub_selection]} / ${id_list[$sub_selection]}"
+    # az account set --subscription ${id_list[$sub_selection]} --only-show-errors
+    account_info=$(az account show -s ${id_list[$sub_selection]})
+    sub_name=$(echo $account_info | jq -r .name)
+    sub_id=$(echo $account_info | jq -r .id)
+    unset IFS
 fi
-
 
 APP_NAME=$PREFIX-vtxcontroller-app
 ROLE_NAME=$PREFIX-vtxcontroller-role
 
-account_info=$(az account show)
-sub_name=$(echo $account_info | jq -r .name)
-sub_id=$(echo $account_info | jq -r .id)
 tenant_id=$(echo $account_info | jq -r .tenantId)
 
+echo
 echo Using the subscription \"$sub_name / $sub_id\"
 echo Create AD App Registraion $APP_NAME
 echo Create Custom IAM Role $ROLE_NAME
 
-read -p "Continue creating? [y/n] " -n 1 -r
+read -p "Continue creating? [y/n] " -n 1
 echo ""
 if [[ "$REPLY" != "y" ]]; then
     exit 1
@@ -69,7 +69,8 @@ fi
 cat > /tmp/role.json <<- EOF
 {
     "Name": "$ROLE_NAME",
-    "Scope": "/subscriptions/$sub_id",
+    "Description": "Role used by the Valtix Controller to manage Subscription(s)",
+    "IsCustom": true,
     "Actions": [
       "Microsoft.ApiManagement/service/*",
       "Microsoft.Compute/disks/*",
@@ -88,45 +89,100 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Resources/subscriptions/resourcegroups/*",
       "Microsoft.Storage/storageAccounts/blobServices/*"
     ],
-    "assignableScopes": [
+    "AssignableScopes": [
         "/subscriptions/$sub_id"
     ]
 }
 EOF
 
 echo "Create AD App Registration $APP_NAME"
-app_output=$(az ad app create --display-name $APP_NAME)
+app_rsp=$(az ad app create --display-name $APP_NAME 2>&1)
+app_output=$(az ad app list --display-name $APP_NAME | jq -r '.[0]')
 app_id=$(echo $app_output | jq -r .appId)
+if [ "$app_id" = "null" ]; then
+    echo "App cannot be created, trying running script again after checking permissions"
+    echo $app_rsp
+    exit 1
+fi
 echo "Create App Service Prinicipal $APP_NAME"
-sp_object_id=$(az ad sp create --id $app_id | jq -r .objectId)
+sp_rsp=$(az ad sp create --id $app_id 2>&1)
+sp_object_id=$(az ad sp show --id $app_id | jq -r .objectId)
+if [ "$sp_object_id" = "null" ]; then
+    echo "Service Principal for the App cannot be created"
+    echo $sp_rsp
+    exit 1
+fi
 echo "Create App Secret"
 secret=$(az ad app credential reset --id $app_id --credential-description 'valtix-secret' --years 5 2>/dev/null | jq -r .password)
+if [ "$secret" = "null" ]; then
+    echo "App Secret cannot be created"
+    exit 1
+fi
 
-echo "Create IAM Role $ROLE_NAME under subscription scope $sub_name"
-az role definition create --role-definition /tmp/role.json &> /dev/null
+echo "Create IAM Role $ROLE_NAME"
+role_rsp=$(az role definition create --subscription $sub_id --role-definition /tmp/role.json 2>&1)
+# if you want to reuse the role (continuing aborted run), dont depend on the exit code of the previous
+# command to continue further
 echo "Assign the Role $ROLE_NAME to the App $APP_NAME"
-az role assignment create --assignee-object-id $sp_object_id --assignee-principal-type ServicePrincipal --role $ROLE_NAME &> /dev/null
+for i in {1..5}; do
+    role_app_rsp=$(az role assignment create --subscription $sub_id \
+        --assignee-object-id $sp_object_id \
+        --assignee-principal-type ServicePrincipal \
+        --role $ROLE_NAME 2>&1)
+    pname=$(az role assignment list --subscription $sub_id --role $ROLE_NAME | jq -r '.[0].principalName')
+    if [ "$pname" != "$app_id" ]; then
+        if [ $i -eq 10 ]; then
+            echo -e "\033[31m** Role could not be assigned to the App\033[0m"
+            echo "Role assignment output"
+            echo $role_app_rsp
+            echo
+        else
+            sleep 5
+        fi
+    else
+        break
+    fi
+done
 
 echo "Accept Marketplace agreements for Valtix Gateway Image"
-az vm image terms accept --publisher valtix --offer datapath --plan valtix_dp_image --subscription $sub_id -o none
+mkt_rsp=$(az vm image terms accept --subscription $sub_id --publisher valtix --offer datapath --plan valtix_dp_image)
+terms_rsp=$(echo $mkt_rsp | jq -r .accepted)
+if [ "$terms_rsp" != "true" ]; then
+    echo -e "\033[31m** Marketplace terms could not be accepted\033[0m"
+    echo $mkt_rsp
+fi
 
-cleanup_file=delete-azure-setup.sh
+cleanup_file="delete-azure-setup-$sub_id.sh"
 echo "Create uninstaller script in the current directory '$cleanup_file'"
-echo "echo Delete Role Assignment $ROLE_NAME for the AD app $APP_NAME" > $cleanup_file
-echo "az role assignment delete --assignee $sp_object_id --role $ROLE_NAME" >> $cleanup_file
-echo "echo Delete IAM Role $ROLE_NAME" >> $cleanup_file
-echo "az role definition delete --name $ROLE_NAME" >> $cleanup_file
-echo "echo Delete AD App Registration $APP_NAME" >> $cleanup_file
-echo "az ad app delete --id $app_id" >> $cleanup_file
-echo "rm $cleanup_file" >> $cleanup_file
+
+cat > $cleanup_file <<- EOF
+
+echo Delete Role Assignment $ROLE_NAME for the AD app $APP_NAME
+for i in {1..5}; do
+    az role assignment delete --subscription $sub_id --assignee $sp_object_id --role $ROLE_NAME
+    pname=\$(az role assignment list --subscription $sub_id --role $ROLE_NAME | jq -r '.[0].principalName')
+    if [ "\$pname" = "null" ]; then
+        break
+    else
+        sleep 5
+    fi
+done
+echo Delete IAM Role $ROLE_NAME
+az role definition delete --subscription $sub_id --name $ROLE_NAME
+echo Delete AD App Registration $APP_NAME
+az ad app delete --id $app_id
+rm $cleanup_file
+
+EOF
 chmod +x $cleanup_file
 
-echo "################################################################################"
-echo "## Below information will be needed to onboard subscription to Valtix Controller"
-echo "################################################################################"
+echo
+echo "----------------------------------------------------------------------------------"
+echo "Information shown below is needed to onboard subscription to the Valtix Controller"
+echo "----------------------------------------------------------------------------------"
 echo "Tenant/Directory: $tenant_id"
-echo "Subscription: $sub_id"
-echo "App: $app_id"
-echo "Secret: $secret"
-echo "################################################################################"
-echo ""
+echo "    Subscription: $sub_id"
+echo "             App: $app_id"
+echo "          Secret: $secret"
+echo "----------------------------------------------------------------------------------"
+echo
