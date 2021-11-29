@@ -1,21 +1,36 @@
 #! /bin/bash
 
 PREFIX="valtix"
+controller=""
+subscription=""
+tenant=""
 
 usage() {
     echo "Usage: $0 [args]"
     echo "-h This help message"
     echo "-p <prefix> - Prefix to use for the App and IAM Role, defaults to valtix"
+    echo "-s <Subscription ID> - Your Azure Subscription ID"
+    echo "-c <Controller> - Your controller's Endpoint"
+    echo "-t <Tenant> - Your Tenant name"
     exit 1
 }
 
-while getopts "hp:" optname; do
+while getopts "hp:c:t:s:" optname; do
     case "${optname}" in
         h)
             usage
             ;;
         p)
             PREFIX=${OPTARG}
+            ;;
+        c)
+            controller=${OPTARG}
+            ;;
+        s)
+            subscription=${OPTARG}
+            ;;
+        t)
+            tenant=${OPTARG}
             ;;
     esac
 done
@@ -152,11 +167,22 @@ if [ "$terms_rsp" != "true" ]; then
     echo $mkt_rsp
 fi
 
+echo "Creating event subscription for an Azure subscription"
+az eventgrid event-subscription create \
+    --source-resource-id "/subscriptions/${subscription}" \
+    --name "${PREFIX}inventory" \
+    --endpoint "$controller/webhook/${tenant}/azure" \
+    --included-event-types \
+     Microsoft.Resources.ResourceWriteSuccess \
+     Microsoft.Resources.ResourceDeleteSuccess \
+     Microsoft.Resources.ResourceActionSuccess
+
 cleanup_file="delete-azure-setup-$sub_id.sh"
 echo "Create uninstaller script in the current directory '$cleanup_file'"
 
 cat > $cleanup_file <<- EOF
-
+echo Delete Event Subscription ${PREFIX}inventory for the subscription $subscription
+az eventgrid event-subscription delete --source-resource-id /subscriptions/${subscription} --name ${PREFIX}inventory
 echo Delete Role Assignment $ROLE_NAME for the AD app $APP_NAME
 for i in {1..5}; do
     az role assignment delete --subscription $sub_id --assignee $sp_object_id --role $ROLE_NAME

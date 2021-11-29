@@ -1,11 +1,62 @@
 #!/bin/bash
 
-storageacct="himatejtestac"
-resourcegroup="eastrg"
-subscription="5e042c15-8e3e-41a6-8dfc-05b1fc703aa7"
-location="eastus"
+storageacct=""
+resourcegroup=""
+subscription=""
+location=""
 tenant=""
 controller=""
+
+usage() {
+    echo "Usage: $0 [args]"
+    echo "-h This help message"
+    echo "-a <Storage Account> - Storage account name to create"
+    echo "-g <Resource Group>  - Resource group name to create storage account in"
+    echo "-s <Subscription ID> - Your Azure Subscription ID"
+    echo "-l <Location>        - Location to enable Network Watcher for"
+    echo "-t <Tenant>          - Your Tenant name"
+    echo "-c <Controller>      - Controller Endpoint"
+    exit 1
+}
+
+while getopts "h:a:g:s:l:t:c:" optname; do
+    case "${optname}" in
+        h)
+            usage
+            ;;
+        a)
+            storageacct=${OPTARG}
+            ;;
+        g)
+            resourcegroup=${OPTARG}
+            ;;
+        s)
+            subscription=${OPTARG}
+            ;;
+        l)
+            location=${OPTARG}
+            ;;
+        t)
+            tenant=${OPTARG}
+            ;;
+        c)
+            controller=${OPTARG}
+            ;;
+    esac
+done
+
+echo "Storage Account: ${storageacct}"
+echo "Resource Group : ${resourcegroup}"
+echo "Subscription ID: ${subscription}"
+echo "Location       : ${location}"
+echo "Tenant         : ${tenant}"
+echo "Controller     : ${controller}"
+
+read -p "Continue creating? [y/n] " -n 1
+echo ""
+if [[ "$REPLY" != "y" ]]; then
+    exit 1
+fi
 
 echo "create storage account $storageacct"
 az storage account create --name  --resource-group $resourcegroup
