@@ -1,19 +1,17 @@
 #! /bin/bash
 
 PREFIX="valtix"
-valtix_controller=""
-valtix_tenant=""
+webhook_endpoint=""
 
 usage() {
     echo "Usage: $0 [args]"
     echo "-h This help message"
     echo "-p <prefix> - Prefix to use for the App and IAM Role, defaults to valtix"
-    echo "-c <valtix_controller> - Your controller's Endpoint"
-    echo "-t <valtix_tenant> - Your Valtix Tenant name"
+    echo "-w <webhook_endpoint> - Your Webhook Endpoint"
     exit 1
 }
 
-while getopts "hp:c:t:" optname; do
+while getopts "hp:w:" optname; do
     case "${optname}" in
         h)
             usage
@@ -21,11 +19,8 @@ while getopts "hp:c:t:" optname; do
         p)
             PREFIX=${OPTARG}
             ;;
-        c)
-            valtix_controller=${OPTARG}
-            ;;
-        t)
-            valtix_tenant=${OPTARG}
+        w)
+            webhook_endpoint=${OPTARG}
             ;;
     esac
 done
@@ -167,7 +162,7 @@ echo "Creating event subscription for an Azure subscription"
 az eventgrid event-subscription create \
     --source-resource-id "/subscriptions/${sub_id}" \
     --name "$EVENT_SUB_NAME" \
-    --endpoint "${valtix_controller}/webhook/${valtix_tenant}/azure" \
+    --endpoint "$webhook_endpoint" \
     --included-event-types \
      Microsoft.Resources.ResourceWriteSuccess \
      Microsoft.Resources.ResourceDeleteSuccess \
