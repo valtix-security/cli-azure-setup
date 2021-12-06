@@ -2,22 +2,18 @@
 
 storageacct=""
 resourcegroup=""
-location=""
-valtix_tenant=""
-controller=""
+webhook_endpoint=""
 
 usage() {
     echo "Usage: $0 [args]"
     echo "-h This help message"
     echo "-s <storage account> - Storage account name to create"
     echo "-g <resource group>  - Resource group name to create storage account in"
-    echo "-l <location>        - Location to enable Network Watcher for"
-    echo "-t <valtix_tenant>   - Your Valtix Tenant name"
-    echo "-c <controller>      - Controller Endpoint"
+    echo "-w <webhook_endpoint> - Your Webhook Endpoint"
     exit 1
 }
 
-while getopts "h:s:g:l:t:c:" optname; do
+while getopts "h:s:g:w:" optname; do
     case "${optname}" in
         h)
             usage
@@ -28,14 +24,8 @@ while getopts "h:s:g:l:t:c:" optname; do
         g)
             resourcegroup=${OPTARG}
             ;;
-        l)
-            location=${OPTARG}
-            ;;
-        t)
-            valtix_tenant=${OPTARG}
-            ;;
-        c)
-            controller=${OPTARG}
+        w)
+            webhook_endpoint=${OPTARG}
             ;;
     esac
 done
@@ -70,15 +60,13 @@ if [ "$REPLY" == "n" ]; then
     unset IFS
 fi
 
-EVENT_SUB_NAME=valtixcontroller
+EVENT_SUB_NAME=holasheventsubtest
 STORAGE_ACCT_NAME=$storageacct
 
 echo "Storage Account: ${STORAGE_ACCT_NAME}"
 echo "Resource Group : ${resourcegroup}"
+echo "Webhook Endpoint : ${webhook_endpoint}"
 echo "Subscription ID: ${sub_id}"
-echo "Location       : ${location}"
-echo "valtix Tenant  : ${valtix_tenant}"
-echo "Controller     : ${controller}"
 
 read -p "Continue creating? [y/n] " -n 1
 echo ""
@@ -92,9 +80,6 @@ az storage account create --name $STORAGE_ACCT_NAME --resource-group $resourcegr
 echo "Enabling microsoft.insights in Resource Providers"
 az provider register --namespace 'microsoft.insights' --subscription $sub_id
 
-echo "Enabling network watcher for $location"
-az network watcher configure -g $resourcegroup -l $location --enabled true
-
 #echo "Creating NSG Flow Log"
 #az network watcher flow-log create --location $location --resource-group $resourcegroup --name MyFlowLog --nsg MyNetworkSecurityGroupName --storage-account $STORAGE_ACCT_NAME
 
@@ -102,7 +87,7 @@ echo "Creating event subscription"
 az eventgrid event-subscription create \
   --source-resource-id "/subscriptions/$sub_id/resourceGroups/$resourcegroup/providers/Microsoft.Storage/storageAccounts/$STORAGE_ACCT_NAME" \
   --name $EVENT_SUB_NAME \
-  --endpoint "$controller/webhook/$valtix_tenant/azure"
+  --endpoint "$webhook_endpoint"
 
 #TODO: delete script
 cleanup_file="delete-discovery-$sub_id.sh"
