@@ -60,7 +60,7 @@ if [ "$REPLY" == "n" ]; then
     unset IFS
 fi
 
-EVENT_SUB_NAME=holasheventsubtest
+EVENT_SUB_NAME=vtxcontroller-discovery
 STORAGE_ACCT_NAME=$storageacct
 
 echo "Storage Account: ${STORAGE_ACCT_NAME}"
