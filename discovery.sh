@@ -3,6 +3,7 @@
 storageacct=""
 resourcegroup=""
 webhook_endpoint=""
+location=""
 
 usage() {
     echo "Usage: $0 [args]"
@@ -10,10 +11,11 @@ usage() {
     echo "-s <storage account> - Storage account name to create"
     echo "-g <resource group>  - Resource group name to create storage account in"
     echo "-w <webhook_endpoint> - Your Webhook Endpoint"
+    echo "-l <location> - Your storage account location"
     exit 1
 }
 
-while getopts "h:s:g:w:" optname; do
+while getopts "h:s:g:w:l:" optname; do
     case "${optname}" in
         h)
             usage
@@ -26,6 +28,9 @@ while getopts "h:s:g:w:" optname; do
             ;;
         w)
             webhook_endpoint=${OPTARG}
+            ;;
+        l)
+            location=${OPTARG}
             ;;
     esac
 done
@@ -65,6 +70,7 @@ STORAGE_ACCT_NAME=$storageacct
 
 echo "Storage Account: ${STORAGE_ACCT_NAME}"
 echo "Resource Group : ${resourcegroup}"
+echo "Location       : ${location}"
 echo "Webhook Endpoint : ${webhook_endpoint}"
 echo "Subscription ID: ${sub_id}"
 
@@ -75,10 +81,13 @@ if [[ "$REPLY" != "y" ]]; then
 fi
 
 echo "create storage account $STORAGE_ACCT_NAME"
-az storage account create --name $STORAGE_ACCT_NAME --resource-group $resourcegroup
+az storage account create --name $STORAGE_ACCT_NAME --resource-group $resourcegroup --location $location
 
 echo "Enabling microsoft.insights in Resource Providers"
 az provider register --namespace 'microsoft.insights' --subscription $sub_id
+
+echo "Enabling network watcher for $location"
+az network watcher configure -g $resourcegroup -l $location --enabled true
 
 #echo "Creating NSG Flow Log"
 #az network watcher flow-log create --location $location --resource-group $resourcegroup --name MyFlowLog --nsg MyNetworkSecurityGroupName --storage-account $STORAGE_ACCT_NAME
@@ -90,7 +99,7 @@ az eventgrid event-subscription create \
   --endpoint "$webhook_endpoint"
 
 #TODO: delete script
-cleanup_file="delete-discovery-$sub_id.sh"
+cleanup_file="delete-discovery-$location-$sub_id.sh"
 echo "Create uninstaller script in the current directory '$cleanup_file'"
 
 cat > $cleanup_file <<- EOF
