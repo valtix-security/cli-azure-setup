@@ -1,7 +1,7 @@
 #!/bin/bash
 
 storageacct=""
-resourcegroup=""
+resourcegroup="ValtixRG"
 webhook_endpoint=""
 location=""
 
@@ -9,22 +9,18 @@ usage() {
     echo "Usage: $0 [args]"
     echo "-h This help message"
     echo "-s <storage account> - Storage account name to create"
-    echo "-g <resource group>  - Resource group name to create storage account in"
     echo "-w <webhook_endpoint> - Your Webhook Endpoint"
     echo "-l <location> - Your storage account location"
     exit 1
 }
 
-while getopts "h:s:g:w:l:" optname; do
+while getopts "h:s:w:l:" optname; do
     case "${optname}" in
         h)
             usage
             ;;
         s)
             storageacct=${OPTARG}
-            ;;
-        g)
-            resourcegroup=${OPTARG}
             ;;
         w)
             webhook_endpoint=${OPTARG}
@@ -34,6 +30,20 @@ while getopts "h:s:g:w:l:" optname; do
             ;;
     esac
 done
+
+if [ "$(az group exists --name $resourcegroup)" == "false" ]; then
+    echo "creating resource group $resourcegroup"
+    az group create --location $location --name $resourcegroup
+fi
+if [ "$(az group exists --name $resourcegroup)" != "true" ]; then
+    echo "The resource group doesn't exist"
+    exit 1;
+fi
+storageacct_check=$(az storage account check-name --name $storageacct)
+if [ "$(echo $storageacct_check | jq -r .nameAvailable)" == "false" ]; then
+    echo "$(echo $storageacct_check | jq -r .reason): $(echo $storageacct_check | jq -r .message)"
+    exit 1;
+fi
 
 account_info=$(az account show)
 sub_name=$(echo $account_info | jq -r .name)
@@ -65,14 +75,14 @@ if [ "$REPLY" == "n" ]; then
     unset IFS
 fi
 
-EVENT_SUB_NAME=vtxcontroller-discovery
+EVENT_SUB_NAME=vtxcontroller-discovery-$location
 STORAGE_ACCT_NAME=$storageacct
 
-echo "Storage Account: ${STORAGE_ACCT_NAME}"
-echo "Resource Group : ${resourcegroup}"
-echo "Location       : ${location}"
-echo "Webhook Endpoint : ${webhook_endpoint}"
-echo "Subscription ID: ${sub_id}"
+echo "Storage Account Name: ${STORAGE_ACCT_NAME}"
+echo "Resource Group      : ${resourcegroup}"
+echo "Location            : ${location}"
+echo "Webhook Endpoint    : ${webhook_endpoint}"
+echo "Subscription ID     : ${sub_id}"
 
 read -p "Continue creating? [y/n] " -n 1
 echo ""
@@ -81,7 +91,7 @@ if [[ "$REPLY" != "y" ]]; then
 fi
 
 echo "create storage account $STORAGE_ACCT_NAME"
-az storage account create --name $STORAGE_ACCT_NAME --resource-group $resourcegroup --location $location
+storageacct_id=$(az storage account create --name $STORAGE_ACCT_NAME --resource-group $resourcegroup --location $location | jq -r .id)
 
 echo "Enabling microsoft.insights in Resource Providers"
 az provider register --namespace 'microsoft.insights' --subscription $sub_id
@@ -110,3 +120,9 @@ az storage account delete --name $STORAGE_ACCT_NAME --resource-group $resourcegr
 rm $cleanup_file
 EOF
 chmod +x $cleanup_file
+
+echo
+echo "----------------------------------------------------------------------------------"
+echo "Storage Account: $storageacct_id"
+echo "----------------------------------------------------------------------------------"
+echo
