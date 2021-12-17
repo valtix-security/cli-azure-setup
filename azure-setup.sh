@@ -1,21 +1,26 @@
 #! /bin/bash
 
 PREFIX="valtix"
+webhook_endpoint=""
 
 usage() {
     echo "Usage: $0 [args]"
     echo "-h This help message"
     echo "-p <prefix> - Prefix to use for the App and IAM Role, defaults to valtix"
+    echo "-w <webhook_endpoint> - Your Webhook Endpoint"
     exit 1
 }
 
-while getopts "hp:" optname; do
+while getopts "hp:w:" optname; do
     case "${optname}" in
         h)
             usage
             ;;
         p)
             PREFIX=${OPTARG}
+            ;;
+        w)
+            webhook_endpoint=${OPTARG}
             ;;
     esac
 done
@@ -52,6 +57,7 @@ fi
 
 APP_NAME=$PREFIX-vtxcontroller-app
 ROLE_NAME=$PREFIX-vtxcontroller-role
+EVENT_SUB_NAME=$PREFIX-vtxcontroller-inventory
 
 tenant_id=$(echo $account_info | jq -r .tenantId)
 
@@ -88,7 +94,8 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Network/virtualNetworks/subnets/*",
       "Microsoft.Resources/subscriptions/resourcegroups/*",
       "Microsoft.Storage/storageAccounts/blobServices/*",
-      "Microsoft.Storage/storageAccounts/listkeys/action"
+      "Microsoft.Storage/storageAccounts/listkeys/action",
+      "Microsoft.Network/networkWatchers/*"
     ],
     "AssignableScopes": [
         "/subscriptions/$sub_id"
@@ -153,11 +160,22 @@ if [ "$terms_rsp" != "true" ]; then
     echo $mkt_rsp
 fi
 
+echo "Creating event subscription for an Azure subscription"
+az eventgrid event-subscription create \
+    --source-resource-id "/subscriptions/${sub_id}" \
+    --name "$EVENT_SUB_NAME" \
+    --endpoint "$webhook_endpoint" \
+    --included-event-types \
+     Microsoft.Resources.ResourceWriteSuccess \
+     Microsoft.Resources.ResourceDeleteSuccess \
+     Microsoft.Resources.ResourceActionSuccess
+
 cleanup_file="delete-azure-setup-$sub_id.sh"
 echo "Create uninstaller script in the current directory '$cleanup_file'"
 
 cat > $cleanup_file <<- EOF
-
+echo Delete Event Subscription $EVENT_SUB_NAME for the subscription $subscription
+az eventgrid event-subscription delete --source-resource-id /subscriptions/${sub_id} --name $EVENT_SUB_NAME
 echo Delete Role Assignment $ROLE_NAME for the AD app $APP_NAME
 for i in {1..5}; do
     az role assignment delete --subscription $sub_id --assignee $sp_object_id --role $ROLE_NAME
