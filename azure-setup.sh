@@ -94,6 +94,7 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Network/virtualNetworks/subnets/*",
       "Microsoft.Resources/subscriptions/resourcegroups/*",
       "Microsoft.Storage/storageAccounts/blobServices/*",
+      "Microsoft.Storage/storageAccounts/listkeys/action",
       "Microsoft.Network/networkWatchers/*"
     ],
     "AssignableScopes": [
