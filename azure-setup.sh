@@ -48,7 +48,7 @@ if [ "$REPLY" == "n" ]; then
     read -p "Enter number from 0 - $num: " sub_selection
     tmp_sub_list=($sub_list)
     echo "Setting the subscription to ${tmp_sub_list[$sub_selection]} / ${id_list[$sub_selection]}"
-    # az account set --subscription ${id_list[$sub_selection]} --only-show-errors
+    az account set --subscription ${id_list[$sub_selection]} --only-show-errors
     account_info=$(az account show -s ${id_list[$sub_selection]})
     sub_name=$(echo $account_info | jq -r .name)
     sub_id=$(echo $account_info | jq -r .id)
