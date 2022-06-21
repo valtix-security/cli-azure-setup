@@ -115,7 +115,8 @@ if [ "$app_id" = "null" ]; then
 fi
 echo "Create App Service Prinicipal $APP_NAME"
 sp_rsp=$(az ad sp create --id $app_id 2>&1)
-sp_object_id=$(az ad sp show --id $app_id | jq -r .objectId)
+sp_object_rsp=$(az ad sp show --id $app_id)
+sp_object_id=$(echo $sp_object_rsp | jq -r 'if .objectId != null then .objectId else .id end')
 if [ "$sp_object_id" = "null" ]; then
     echo "Service Principal for the App cannot be created"
     echo $sp_rsp
@@ -123,6 +124,9 @@ if [ "$sp_object_id" = "null" ]; then
 fi
 echo "Create App Secret"
 secret=$(az ad app credential reset --id $app_id --credential-description 'valtix-secret' --years 5 2>/dev/null | jq -r .password)
+if [ "$secret" = "null" -o "$secret" = "" ]; then
+    secret=$(az ad app credential reset --id $app_id --display-name 'valtix-secret' --years 5 2>/dev/null | jq -r .password)
+fi
 if [ "$secret" = "null" ]; then
     echo "App Secret cannot be created"
     exit 1
@@ -133,7 +137,7 @@ role_rsp=$(az role definition create --subscription $sub_id --role-definition /t
 # if you want to reuse the role (continuing aborted run), dont depend on the exit code of the previous
 # command to continue further
 echo "Assign the Role $ROLE_NAME to the App $APP_NAME"
-for i in {1..5}; do
+for i in {1..10}; do
     role_app_rsp=$(az role assignment create --subscription $sub_id \
         --assignee-object-id $sp_object_id \
         --assignee-principal-type ServicePrincipal \
@@ -167,9 +171,9 @@ az eventgrid event-subscription create \
     --name "$EVENT_SUB_NAME" \
     --endpoint "$webhook_endpoint" \
     --included-event-types \
-     Microsoft.Resources.ResourceWriteSuccess \
-     Microsoft.Resources.ResourceDeleteSuccess \
-     Microsoft.Resources.ResourceActionSuccess
+    Microsoft.Resources.ResourceWriteSuccess \
+    Microsoft.Resources.ResourceDeleteSuccess \
+    Microsoft.Resources.ResourceActionSuccess
 
 cleanup_file="delete-azure-setup-$sub_id.sh"
 echo "Create uninstaller script in the current directory '$cleanup_file'"
