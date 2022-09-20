@@ -96,7 +96,8 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Storage/storageAccounts/blobServices/*",
       "Microsoft.Storage/storageAccounts/listkeys/action",
       "Microsoft.Network/networkWatchers/*",
-      "Microsoft.Network/applicationSecurityGroups/*"
+      "Microsoft.Network/applicationSecurityGroups/*",
+      "Microsoft.Compute/diskEncryptionSets/read"
     ],
     "AssignableScopes": [
         "/subscriptions/$sub_id"
