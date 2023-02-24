@@ -72,6 +72,15 @@ if [[ "$REPLY" != "y" ]]; then
     exit 1
 fi
 
+echo "Enabling microsoft.compute in Resource Providers"
+az provider register --namespace 'microsoft.compute' --subscription $sub_id
+echo "Enabling microsoft.network in Resource Providers"
+az provider register --namespace 'microsoft.network' --subscription $sub_id
+echo "Enabling microsoft.eventgrid in Resource Providers"
+az provider register --namespace 'microsoft.eventgrid' --subscription $sub_id
+echo "Enabling microsoft.marketplace in Resource Providers"
+az provider register --namespace 'microsoft.marketplace' --subscription $sub_id
+
 cat > /tmp/role.json <<- EOF
 {
     "Name": "$ROLE_NAME",
