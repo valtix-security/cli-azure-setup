@@ -1,12 +1,12 @@
 #! /bin/bash
 
-PREFIX="valtix"
+PREFIX="ciscomcd"
 webhook_endpoint=""
 
 usage() {
     echo "Usage: $0 [args]"
     echo "-h This help message"
-    echo "-p <prefix> - Prefix to use for the App and IAM Role, defaults to valtix"
+    echo "-p <prefix> - Prefix to use for the App and IAM Role, defaults to ciscomcd"
     echo "-w <webhook_endpoint> - Your Webhook Endpoint"
     exit 1
 }
@@ -30,7 +30,7 @@ sub_name=$(echo $account_info | jq -r .name)
 sub_id=$(echo $account_info | jq -r .id)
 
 echo "Your current subscription is ${sub_name} / ${sub_id}"
-read -p "Is this the subscription you want to onboard to Valtix? [y/n] " -n 1
+read -p "Is this the subscription you want to onboard to Cisco Multicloud Defense? [y/n] " -n 1
 
 if [ "$REPLY" == "n" ]; then
     all_sub=$(az account list)
@@ -55,9 +55,9 @@ if [ "$REPLY" == "n" ]; then
     unset IFS
 fi
 
-APP_NAME=$PREFIX-vtxcontroller-app
-ROLE_NAME=$PREFIX-vtxcontroller-role
-EVENT_SUB_NAME=$PREFIX-vtxcontroller-inventory
+APP_NAME=$PREFIX-controller-app
+ROLE_NAME=$PREFIX-controller-role
+EVENT_SUB_NAME=$PREFIX-controller-inventory
 
 tenant_id=$(echo $account_info | jq -r .tenantId)
 
@@ -84,7 +84,7 @@ az provider register --namespace 'microsoft.marketplace' --subscription $sub_id
 cat > /tmp/role.json <<- EOF
 {
     "Name": "$ROLE_NAME",
-    "Description": "Role used by the Valtix Controller to manage Subscription(s)",
+    "Description": "Role used by the Cisco Multicloud Defense Controller to manage Subscription(s)",
     "IsCustom": true,
     "Actions": [
       "Microsoft.ApiManagement/service/*",
@@ -133,9 +133,9 @@ if [ "$sp_object_id" = "null" ]; then
     exit 1
 fi
 echo "Create App Secret"
-secret=$(az ad app credential reset --id $app_id --credential-description 'valtix-secret' --years 5 2>/dev/null | jq -r .password)
+secret=$(az ad app credential reset --id $app_id --credential-description 'ciscomcd-secret' --years 5 2>/dev/null | jq -r .password)
 if [ "$secret" = "null" -o "$secret" = "" ]; then
-    secret=$(az ad app credential reset --id $app_id --display-name 'valtix-secret' --years 5 2>/dev/null | jq -r .password)
+    secret=$(az ad app credential reset --id $app_id --display-name 'ciscomcd-secret' --years 5 2>/dev/null | jq -r .password)
 fi
 if [ "$secret" = "null" ]; then
     echo "App Secret cannot be created"
@@ -167,7 +167,7 @@ for i in {1..10}; do
     fi
 done
 
-echo "Accept Marketplace agreements for Valtix Gateway Image"
+echo "Accept Marketplace agreements for Cisco Multicloud Defense Gateway Image"
 mkt_rsp=$(az vm image terms accept --subscription $sub_id --publisher valtix --offer datapath --plan valtix_dp_image)
 terms_rsp=$(echo $mkt_rsp | jq -r .accepted)
 if [ "$terms_rsp" != "true" ]; then
@@ -211,12 +211,12 @@ EOF
 chmod +x $cleanup_file
 
 echo
-echo "----------------------------------------------------------------------------------"
-echo "Information shown below is needed to onboard subscription to the Valtix Controller"
-echo "----------------------------------------------------------------------------------"
+echo "----------------------------------------------------------------------------------------------------"
+echo "Information shown below is needed to onboard subscription to the Cisco Multicloud Defense Controller"
+echo "----------------------------------------------------------------------------------------------------"
 echo "Tenant/Directory: $tenant_id"
 echo "    Subscription: $sub_id"
 echo "             App: $app_id"
 echo "          Secret: $secret"
-echo "----------------------------------------------------------------------------------"
+echo "----------------------------------------------------------------------------------------------------"
 echo
