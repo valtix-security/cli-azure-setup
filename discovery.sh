@@ -1,7 +1,7 @@
 #!/bin/bash
 
 storageacct=""
-resourcegroup="ValtixRG"
+resourcegroup="CiscoMCDRG"
 webhook_endpoint=""
 location=""
 
@@ -50,7 +50,7 @@ sub_name=$(echo $account_info | jq -r .name)
 sub_id=$(echo $account_info | jq -r .id)
 
 echo "Your current subscription is ${sub_name} / ${sub_id}"
-read -p "Is this the subscription you want to onboard to Valtix? [y/n] " -n 1
+read -p "Is this the subscription you want to onboard to Multicloud Defense? [y/n] " -n 1
 
 if [ "$REPLY" == "n" ]; then
     all_sub=$(az account list)
