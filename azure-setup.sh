@@ -155,7 +155,7 @@ for i in {1..10}; do
         --assignee-principal-type ServicePrincipal \
         --role $ROLE_NAME 2>&1)
     pname=$(az role assignment list --subscription $sub_id --role $ROLE_NAME | jq -r '.[0].principalName')
-    if [ "$pname" != "api://$app_id" ]; then
+    if [ "$pname" != "$app_id" ]; then
         if [ $i -eq 10 ]; then
             echo -e "\033[31m** Role could not be assigned to the App\033[0m"
             echo "Role assignment output"
