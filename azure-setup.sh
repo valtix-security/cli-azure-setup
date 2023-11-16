@@ -150,11 +150,12 @@ role_rsp=$(az role definition create --subscription $sub_id --role-definition /t
 echo "Assign the Role $ROLE_NAME to the App $APP_NAME"
 for i in {1..10}; do
     role_app_rsp=$(az role assignment create --subscription $sub_id \
+        --scope /subscriptions/$sub_id \
         --assignee-object-id $sp_object_id \
         --assignee-principal-type ServicePrincipal \
         --role $ROLE_NAME 2>&1)
     pname=$(az role assignment list --subscription $sub_id --role $ROLE_NAME | jq -r '.[0].principalName')
-    if [ "$pname" != "$app_id" ]; then
+    if [ "$pname" != "api://$app_id" ]; then
         if [ $i -eq 10 ]; then
             echo -e "\033[31m** Role could not be assigned to the App\033[0m"
             echo "Role assignment output"
