@@ -61,16 +61,7 @@ EVENT_SUB_NAME=$PREFIX-controller-inventory
 
 tenant_id=$(echo $account_info | jq -r .tenantId)
 
-echo
-echo Using the subscription \"$sub_name / $sub_id\"
-echo Create AD App Registraion $APP_NAME
-echo Create Custom IAM Role $ROLE_NAME
 
-read -p "Continue creating? [y/n] " -n 1
-echo ""
-if [[ "$REPLY" != "y" ]]; then
-    exit 1
-fi
 
 echo "Enabling microsoft.compute in Resource Providers"
 az provider register --namespace 'microsoft.compute' --subscription $sub_id
@@ -115,32 +106,108 @@ cat > /tmp/role.json <<- EOF
 }
 EOF
 
-echo "Create AD App Registration $APP_NAME"
-app_rsp=$(az ad app create --display-name $APP_NAME 2>&1)
-app_output=$(az ad app list --display-name $APP_NAME | jq -r '.[0]')
-app_id=$(echo $app_output | jq -r .appId)
-if [ "$app_id" = "null" ]; then
-    echo "App cannot be created, trying running script again after checking permissions"
-    echo $app_rsp
-    exit 1
-fi
-echo "Create App Service Prinicipal $APP_NAME"
-sp_rsp=$(az ad sp create --id $app_id 2>&1)
-sp_object_rsp=$(az ad sp show --id $app_id)
-sp_object_id=$(echo $sp_object_rsp | jq -r 'if .objectId != null then .objectId else .id end')
-if [ "$sp_object_id" = "null" ]; then
-    echo "Service Principal for the App cannot be created"
-    echo $sp_rsp
-    exit 1
-fi
-echo "Create App Secret"
-secret=$(az ad app credential reset --id $app_id --credential-description 'ciscomcd-secret' --years 5 2>/dev/null | jq -r .password)
-if [ "$secret" = "null" -o "$secret" = "" ]; then
-    secret=$(az ad app credential reset --id $app_id --display-name 'ciscomcd-secret' --years 5 2>/dev/null | jq -r .password)
-fi
-if [ "$secret" = "null" ]; then
-    echo "App Secret cannot be created"
-    exit 1
+
+echo
+echo Using the subscription \"$sub_name / $sub_id\"
+
+read -p "Do you want to use existing AD App id (y) or create new(n) ? [y/n] " -n 1
+
+existing_sub=$REPLY
+if [[ "$REPLY" == "y" ]]; then
+    all_sub=$(az account list)
+    sub_list=$(echo $all_sub | jq -r '.[].name')
+    tmp_id_list=$(echo $all_sub | jq -r '.[].id')
+    id_list=($tmp_id_list)
+    echo 
+    echo "Select your subscription where the  AD App  is present:"
+    IFS=$'\n'
+    num=0
+    for i in $sub_list; do
+        echo "($num) $i / ${id_list[$num]}"
+        num=$(( $num + 1 ))
+    done
+    num=$(($num-1))
+    read -p "Enter number from 0 - $num: " sub_selection
+    tmp_sub_list=($sub_list)
+    echo "Setting the subscription to ${tmp_sub_list[$sub_selection]} / ${id_list[$sub_selection]}"
+    az account set --subscription ${id_list[$sub_selection]} --only-show-errors
+    account_info=$(az account show -s ${id_list[$sub_selection]})
+    ad_sub_name=$(echo $account_info | jq -r .name)
+    ad_sub_id=$(echo $account_info | jq -r .id)
+
+
+    all_ad_app=$(az ad app list)
+    ad_app_list=$(echo $all_ad_app|jq -r '.[].displayName')
+    echo 
+    echo "ad app names"
+    echo $ad_app_list
+    echo 
+    tmp_ad_app_id_list=$(echo $all_ad_app|jq -r '.[].appId')
+    echo 
+    echo "ad app ids"
+    echo $tmp_ad_app_id_list
+    echo 
+    ad_app_id_list=($tmp_ad_app_id_list)
+    echo "Select your AD App which you want to use:"
+    num=0
+    for i in $ad_app_list; do
+        echo "($num) $i / ${ad_app_id_list[$num]}"
+        num=$(( $num + 1 ))
+    done
+    num=$(($num-1))
+    read -p "Enter number from 0 - $num: " ad_selection
+    tmp_ad_app_list=($ad_app_list)
+    echo "Using the AD App  ${tmp_ad_app_list[$ad_selection]} / ${ad_app_id_list[$ad_selection]}"
+    APP_NAME=${tmp_ad_app_list[$ad_selection]}
+    app_id=${ad_app_id_list[$ad_selection]}
+    echo app_id=$app_id
+    echo "Finding App Service Prinicipal for $APP_NAME"
+    sp_object_rsp=$(az ad sp show --id $app_id)
+    sp_object_id=$(echo $sp_object_rsp | jq -r 'if .objectId != null then .objectId else .id end')
+    if [ "$sp_object_id" = "null" ]; then
+        echo "Service Principal for the App cannot be found"
+        echo $sp_rsp
+        exit 1
+    fi
+    echo Service Principle for the app is $sp_object_id
+    unset IFS
+    echo "Setting the back to subscription to be onboarded $sub_name / $sub_id"
+    az account set --subscription $sub_id --only-show-errors
+else
+    echo Create AD App Registraion $APP_NAME
+
+    read -p "Continue creating? [y/n] " -n 1
+    echo ""
+    if [[ "$REPLY" != "y" ]]; then
+        exit 1
+    fi
+    echo "Create AD App Registration $APP_NAME"
+    app_rsp=$(az ad app create --display-name $APP_NAME 2>&1)
+    app_output=$(az ad app list --display-name $APP_NAME | jq -r '.[0]')
+    app_id=$(echo $app_output | jq -r .appId)
+    if [ "$app_id" = "null" ]; then
+        echo "App cannot be created, trying running script again after checking permissions"
+        echo $app_rsp
+        exit 1
+    fi
+    echo "Create App Service Prinicipal $APP_NAME"
+    sp_rsp=$(az ad sp create --id $app_id 2>&1)
+    sp_object_rsp=$(az ad sp show --id $app_id)
+    sp_object_id=$(echo $sp_object_rsp | jq -r 'if .objectId != null then .objectId else .id end')
+    if [ "$sp_object_id" = "null" ]; then
+        echo "Service Principal for the App cannot be created"
+        echo $sp_rsp
+        exit 1
+    fi
+    echo "Create App Secret"
+    secret=$(az ad app credential reset --id $app_id --credential-description 'ciscomcd-secret' --years 5 2>/dev/null | jq -r .password)
+    if [ "$secret" = "null" -o "$secret" = "" ]; then
+        secret=$(az ad app credential reset --id $app_id --display-name 'ciscomcd-secret' --years 5 2>/dev/null | jq -r .password)
+    fi
+    if [ "$secret" = "null" ]; then
+        echo "App Secret cannot be created"
+        exit 1
+    fi
 fi
 
 echo "Create IAM Role $ROLE_NAME"
@@ -190,6 +257,29 @@ az eventgrid event-subscription create \
 cleanup_file="delete-azure-setup-$sub_id.sh"
 echo "Create uninstaller script in the current directory '$cleanup_file'"
 
+if [[ "$existing_sub" == "y" ]]; then
+
+cat > $cleanup_file <<- EOF
+echo Delete Event Subscription $EVENT_SUB_NAME for the subscription $subscription
+az eventgrid event-subscription delete --source-resource-id /subscriptions/${sub_id} --name $EVENT_SUB_NAME
+echo Delete Role Assignment $ROLE_NAME for the AD app $APP_NAME
+for i in {1..5}; do
+    az role assignment delete --subscription $sub_id --assignee $sp_object_id --role $ROLE_NAME
+    pname=\$(az role assignment list --subscription $sub_id --role $ROLE_NAME | jq -r '.[0].principalName')
+    if [ "\$pname" = "null" ]; then
+        break
+    else
+        sleep 5
+    fi
+done
+echo Delete IAM Role $ROLE_NAME
+az role definition delete --subscription $sub_id --name $ROLE_NAME
+rm $cleanup_file
+
+EOF
+
+else
+
 cat > $cleanup_file <<- EOF
 echo Delete Event Subscription $EVENT_SUB_NAME for the subscription $subscription
 az eventgrid event-subscription delete --source-resource-id /subscriptions/${sub_id} --name $EVENT_SUB_NAME
@@ -210,6 +300,8 @@ az ad app delete --id $app_id
 rm $cleanup_file
 
 EOF
+
+fi
 chmod +x $cleanup_file
 
 echo
