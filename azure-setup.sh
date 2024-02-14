@@ -116,7 +116,7 @@ read -p "Do you want to use existing AD App id (y) or create new(n) ? [y/n] " -n
 existing_sub=$REPLY
 if [[ "$REPLY" == "y" ]]; then
 
-    all_ad_app=$(az ad app list)
+    all_ad_app=$(az ad app list --all)
     ad_app_list=$(echo $all_ad_app|jq -r '.[].displayName')
     echo 
     echo "ad app names"
