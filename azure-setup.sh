@@ -185,7 +185,7 @@ echo "Create IAM Role $ROLE_NAME"
 role_rsp=$(az role definition create --subscription $sub_id --role-definition /tmp/role.json 2>&1)
 # if you want to reuse the role (continuing aborted run), dont depend on the exit code of the previous
 # command to continue further
-echo "Assign the Role $ROLE_NAME to the App $APP_NAME"
+echo "Assign the Role $ROLE_NAME to the App $APP_NAME in subscription $sub_id serivce principal $sp_object_id "
 for i in {1..10}; do
     role_app_rsp=$(az role assignment create --subscription $sub_id \
         --scope /subscriptions/$sub_id \
