@@ -47,6 +47,7 @@ if [ "$REPLY" == "n" ]; then
     num=$(($num-1))
     read -p "Enter number from 0 - $num: " sub_selection
     tmp_sub_list=($sub_list)
+    echo 
     echo "Setting the subscription to ${tmp_sub_list[$sub_selection]} / ${id_list[$sub_selection]}"
     az account set --subscription ${id_list[$sub_selection]} --only-show-errors
     account_info=$(az account show -s ${id_list[$sub_selection]})
@@ -114,27 +115,6 @@ read -p "Do you want to use existing AD App id (y) or create new(n) ? [y/n] " -n
 
 existing_sub=$REPLY
 if [[ "$REPLY" == "y" ]]; then
-    all_sub=$(az account list)
-    sub_list=$(echo $all_sub | jq -r '.[].name')
-    tmp_id_list=$(echo $all_sub | jq -r '.[].id')
-    id_list=($tmp_id_list)
-    echo 
-    echo "Select your subscription where the  AD App  is present:"
-    IFS=$'\n'
-    num=0
-    for i in $sub_list; do
-        echo "($num) $i / ${id_list[$num]}"
-        num=$(( $num + 1 ))
-    done
-    num=$(($num-1))
-    read -p "Enter number from 0 - $num: " sub_selection
-    tmp_sub_list=($sub_list)
-    echo "Setting the subscription to ${tmp_sub_list[$sub_selection]} / ${id_list[$sub_selection]}"
-    az account set --subscription ${id_list[$sub_selection]} --only-show-errors
-    account_info=$(az account show -s ${id_list[$sub_selection]})
-    ad_sub_name=$(echo $account_info | jq -r .name)
-    ad_sub_id=$(echo $account_info | jq -r .id)
-
 
     all_ad_app=$(az ad app list)
     ad_app_list=$(echo $all_ad_app|jq -r '.[].displayName')
@@ -171,8 +151,6 @@ if [[ "$REPLY" == "y" ]]; then
     fi
     echo Service Principle for the app is $sp_object_id
     unset IFS
-    echo "Setting the back to subscription to be onboarded $sub_name / $sub_id"
-    az account set --subscription $sub_id --only-show-errors
 else
     echo Create AD App Registraion $APP_NAME
 
