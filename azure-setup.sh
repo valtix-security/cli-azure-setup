@@ -118,15 +118,7 @@ if [[ "$REPLY" == "y" ]]; then
 
     all_ad_app=$(az ad app list --all)
     ad_app_list=$(echo $all_ad_app|jq -r '.[].displayName')
-    echo 
-    echo "ad app names"
-    echo $ad_app_list
-    echo 
     tmp_ad_app_id_list=$(echo $all_ad_app|jq -r '.[].appId')
-    echo 
-    echo "ad app ids"
-    echo $tmp_ad_app_id_list
-    echo 
     ad_app_id_list=($tmp_ad_app_id_list)
     echo "Select your AD App which you want to use:"
     num=0
