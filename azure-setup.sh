@@ -152,6 +152,7 @@ if [[ "$REPLY" == "y" ]]; then
     echo Service Principle for the app is $sp_object_id
     unset IFS
 else
+    echo 
     echo Create AD App Registraion $APP_NAME
 
     read -p "Continue creating? [y/n] " -n 1
