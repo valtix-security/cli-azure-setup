@@ -37,6 +37,7 @@ if [ "$REPLY" == "n" ]; then
     sub_list=$(echo $all_sub | jq -r '.[].name')
     tmp_id_list=$(echo $all_sub | jq -r '.[].id')
     id_list=($tmp_id_list)
+    echo 
     echo "Select your subscription:"
     IFS=$'\n'
     num=0
@@ -63,7 +64,7 @@ EVENT_SUB_NAME=$PREFIX-controller-inventory
 tenant_id=$(echo $account_info | jq -r .tenantId)
 
 
-
+echo 
 echo "Enabling microsoft.compute in Resource Providers"
 az provider register --namespace 'microsoft.compute' --subscription $sub_id
 echo "Enabling microsoft.network in Resource Providers"
@@ -114,26 +115,38 @@ echo Using the subscription \"$sub_name / $sub_id\"
 read -p "Do you want to use existing AD App id (y) or create new(n) ? [y/n] " -n 1
 
 existing_sub=$REPLY
-if [[ "$REPLY" == "y" ]]; then
-
+if [[ "$REPLY" == "y" || "$REPLY" == "Y" ]]; then
+    echo 
+    echo Please wait getting the APP IDs in your account
     all_ad_app=$(az ad app list --all)
-    ad_app_list=$(echo $all_ad_app|jq -r '.[].displayName')
-    tmp_ad_app_id_list=$(echo $all_ad_app|jq -r '.[].appId')
-    ad_app_id_list=($tmp_ad_app_id_list)
-    echo "Select your AD App which you want to use:"
-    num=0
-    for i in $ad_app_list; do
-        echo "($num) $i / ${ad_app_id_list[$num]}"
-        num=$(( $num + 1 ))
+
+    declare -A display_name_map
+    declare -A app_id_map
+
+    index=0
+    while IFS= read -r line; do
+        display_name=$(echo "$line" | jq -r '.displayName | @sh')
+        app_id=$(echo "$line" | jq -r '.appId')
+
+        display_name_map[$index]=$display_name
+        app_id_map[$index]=$app_id
+
+        ((index++))
+    done < <(echo "$all_ad_app" | jq -c '.[]')
+
+    length=${#display_name_map[@]}
+    for ((i = 0; i < length; i++)); do
+        display_name="${display_name_map[$i]}"
+        app_id="${app_id_map[$i]}"
+        
+        echo "$i $display_name/ $app_id"
     done
-    num=$(($num-1))
-    read -p "Enter number from 0 - $num: " ad_selection
-    tmp_ad_app_list=($ad_app_list)
-    echo "Using the AD App  ${tmp_ad_app_list[$ad_selection]} / ${ad_app_id_list[$ad_selection]}"
-    APP_NAME=${tmp_ad_app_list[$ad_selection]}
-    app_id=${ad_app_id_list[$ad_selection]}
-    echo app_id=$app_id
-    echo "Finding App Service Prinicipal for $APP_NAME"
+    length=$(($length-1))
+    read -p "Enter number from 0 - $length: " ad_selection
+    echo "Using the AD App  ${display_name_map[$ad_selection]} / ${app_id_map[$ad_selection]}"
+    APP_NAME=${display_name_map[$ad_selection]}
+    app_id=${app_id_map[$ad_selection]}
+    echo "Finding App Service Prinicipal for $APP_NAME / $app_id"
     sp_object_rsp=$(az ad sp show --id $app_id)
     sp_object_id=$(echo $sp_object_rsp | jq -r 'if .objectId != null then .objectId else .id end')
     if [ "$sp_object_id" = "null" ]; then
@@ -228,7 +241,7 @@ az eventgrid event-subscription create \
 cleanup_file="delete-azure-setup-$sub_id.sh"
 echo "Create uninstaller script in the current directory '$cleanup_file'"
 
-if [[ "$existing_sub" == "y" ]]; then
+if [[ "$existing_sub" == "y"  || "$existing_sub" == "Y" ]]; then
 
 cat > $cleanup_file <<- EOF
 echo Delete Event Subscription $EVENT_SUB_NAME for the subscription $subscription
