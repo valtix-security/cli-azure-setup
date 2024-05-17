@@ -88,6 +88,7 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.ManagedIdentity/userAssignedIdentities/read",
       "Microsoft.ManagedIdentity/userAssignedIdentities/assign/action",
       "Microsoft.Network/loadBalancers/*",
+      "Microsoft.Network/natGateways/*",
       "Microsoft.Network/networkinterfaces/*",
       "Microsoft.Network/networkSecurityGroups/*",
       "Microsoft.Network/publicIPAddresses/*",
