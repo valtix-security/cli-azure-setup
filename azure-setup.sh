@@ -229,7 +229,7 @@ if [ "$terms_rsp" != "true" ]; then
     echo $mkt_rsp
 fi
 
-echo "Creating event subscription for an Azure subscription"
+echo "Creating event subscription for an Azure subscription, with enabled authorization"
 az eventgrid event-subscription create \
     --source-resource-id "/subscriptions/${sub_id}" \
     --name "$EVENT_SUB_NAME" \
@@ -237,7 +237,9 @@ az eventgrid event-subscription create \
     --included-event-types \
     Microsoft.Resources.ResourceWriteSuccess \
     Microsoft.Resources.ResourceDeleteSuccess \
-    Microsoft.Resources.ResourceActionSuccess
+    Microsoft.Resources.ResourceActionSuccess \
+    --azure-active-directory-tenant-id "$tenant_id" \
+    --azure-active-directory-application-id-or-uri "$app_id"
 
 cleanup_file="delete-azure-setup-$sub_id.sh"
 echo "Create uninstaller script in the current directory '$cleanup_file'"
