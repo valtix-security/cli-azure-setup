@@ -234,7 +234,7 @@ signed_in_user_id=$(az ad signed-in-user show --query id --output tsv)
 echo "Check and Add Current User's Id $signed_in_user_id as App $APP_NAME Owner"
 
 # Loop to check if the user is an owner, with retries and delay
-for i in {1..2}; do
+for i in {1..5}; do
     # Check if the user is listed as an owner
     OWNER_CHECK=$(az ad app owner list --id $app_id --query "[?id=='$signed_in_user_id'].id" --output tsv)
 
