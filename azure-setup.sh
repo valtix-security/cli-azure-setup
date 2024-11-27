@@ -229,6 +229,26 @@ if [ "$terms_rsp" != "true" ]; then
     echo $mkt_rsp
 fi
 
+
+signed_in_user_id=$(az ad signed-in-user show --query id --output tsv)
+echo "Check and Add Current User's Id $signed_in_user_id as App $APP_NAME Owner"
+
+# Loop to check if the user is an owner, with retries and delay
+for i in {1..5}; do
+    # Check if the user is listed as an owner
+    OWNER_CHECK=$(az ad app owner list --id $app_id --query "[?id=='$signed_in_user_id'].id" --output tsv)
+
+    if [[ -n "$OWNER_CHECK" ]]; then
+        echo "The Current User is an Owner of the App $APP_NAME."
+        break
+    else
+        echo "The Current User is not an Owner. Adding Current user as App owner and Waiting for 30 seconds before retrying"
+        az ad app owner add --id $app_id --owner-object-id $signed_in_user_id
+        sleep 30
+    fi
+done
+
+
 echo "Creating event subscription for an Azure subscription, with enabled authorization"
 az eventgrid event-subscription create \
     --source-resource-id "/subscriptions/${sub_id}" \
