@@ -104,7 +104,6 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Insights/Metrics/Read",
       "Microsoft.Network/locations/serviceTagDetails/read",
       "Microsoft.Network/locations/serviceTags/read"
-
     ],
     "AssignableScopes": [
         "/subscriptions/$sub_id"
