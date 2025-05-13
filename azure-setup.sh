@@ -224,13 +224,13 @@ for i in {1..10}; do
     fi
 done
 
-# Add the marketplace purchaser role right here - before marketplace agreement acceptance
+# Add the marketplace Admin role right here - before marketplace agreement acceptance
 echo "Assigning marketplace purchase permissions" 
 az role assignment create --subscription $sub_id \
     --scope "/subscriptions/$sub_id" \
     --assignee-object-id $sp_object_id \
     --assignee-principal-type ServicePrincipal \
-    --role "Marketplace Purchaser"
+    --role "Marketplace Admin"
 
 
 echo "Accept Marketplace agreements for Cisco Multicloud Defense Gateway Image"
