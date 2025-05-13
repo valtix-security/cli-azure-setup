@@ -103,10 +103,7 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Compute/diskEncryptionSets/read",
       "Microsoft.Insights/Metrics/Read",
       "Microsoft.Network/locations/serviceTagDetails/read",
-      "Microsoft.Network/locations/serviceTags/read",
-      "Microsoft.MarketplaceOrdering/agreements/write",
-      "Microsoft.MarketplaceOrdering/agreements/read",
-      "Microsoft.MarketplaceOrdering/offerTypes/publishers/offers/plans/agreements/read"
+      "Microsoft.Network/locations/serviceTags/read"
 
     ],
     "AssignableScopes": [
@@ -226,6 +223,15 @@ for i in {1..10}; do
         break
     fi
 done
+
+# Add the marketplace purchaser role right here - before marketplace agreement acceptance
+echo "Assigning marketplace purchase permissions" 
+az role assignment create --subscription $sub_id \
+    --scope "/subscriptions/$sub_id" \
+    --assignee-object-id $sp_object_id \
+    --assignee-principal-type ServicePrincipal \
+    --role "Marketplace Purchaser"
+
 
 echo "Accept Marketplace agreements for Cisco Multicloud Defense Gateway Image"
 mkt_rsp=$(az vm image terms accept --subscription $sub_id --publisher valtix --offer datapath --plan valtix_dp_image)
