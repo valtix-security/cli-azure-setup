@@ -223,14 +223,31 @@ for i in {1..10}; do
     fi
 done
 
-# Add the marketplace Admin role right here - before marketplace agreement acceptance
-echo "Assigning marketplace purchase permissions" 
+# Define a minimal custom role specifically for marketplace terms
+echo "Creating minimal marketplace terms role"
+cat > /tmp/marketplace-role.json <<EOF
+{
+    "Name": "${PREFIX}-marketplace-terms-role",
+    "Description": "Minimal role for accepting marketplace terms",
+    "Actions": [
+        "Microsoft.MarketplaceOrdering/agreements/write",
+        "Microsoft.MarketplaceOrdering/agreements/read",
+        "Microsoft.MarketplaceOrdering/offerTypes/publishers/offers/plans/agreements/read"
+    ],
+    "AssignableScopes": [
+        "/subscriptions/$sub_id"
+    ],
+    "IsCustom": true
+}
+EOF
+
+# Create the role and assign it
+az role definition create --subscription $sub_id --role-definition /tmp/marketplace-role.json
 az role assignment create --subscription $sub_id \
     --scope "/subscriptions/$sub_id" \
     --assignee-object-id $sp_object_id \
     --assignee-principal-type ServicePrincipal \
-    --role "Marketplace Admin"
-
+    --role "${PREFIX}-marketplace-terms-role"
 
 echo "Accept Marketplace agreements for Cisco Multicloud Defense Gateway Image"
 mkt_rsp=$(az vm image terms accept --subscription $sub_id --publisher valtix --offer datapath --plan valtix_dp_image)
