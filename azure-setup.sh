@@ -231,6 +231,13 @@ if [ "$terms_rsp" != "true" ]; then
     echo $mkt_rsp
 fi
 
+echo "Accept Marketplace agreements for Cisco Firepower Threat Defense"
+mkt_ftdv=$(az vm image terms accept --subscription $sub_id --publisher cisco --offer cisco-ftdv --plan ftdv-azure-byol)
+terms_ftdv=$(echo $mkt_ftdv | jq -r .accepted)
+if [ "$terms_ftdv" != "true" ]; then
+    echo -e "\033[31m** Marketplace terms for ftdv could not be accepted\033[0m"
+    echo $mkt_ftdv
+fi
 
 signed_in_user_id=$(az ad signed-in-user show --query id --output tsv)
 echo "Check and Add Current User's Id $signed_in_user_id as App $APP_NAME Owner"
