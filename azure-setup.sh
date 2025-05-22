@@ -103,7 +103,9 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Compute/diskEncryptionSets/read",
       "Microsoft.Insights/Metrics/Read",
       "Microsoft.Network/locations/serviceTagDetails/read",
-      "Microsoft.Network/locations/serviceTags/read"
+      "Microsoft.Network/locations/serviceTags/read",
+      "Microsoft.CognitiveServices/*/read",
+      "Microsoft.CognitiveServices/accounts/listkeys/action"
     ],
     "AssignableScopes": [
         "/subscriptions/$sub_id"
