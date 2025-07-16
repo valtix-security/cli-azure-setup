@@ -104,6 +104,8 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Insights/Metrics/Read",
       "Microsoft.Network/locations/serviceTagDetails/read",
       "Microsoft.Network/locations/serviceTags/read",
+      "Microsoft.CognitiveServices/*/read",
+      "Microsoft.CognitiveServices/accounts/listkeys/action",
       "Microsoft.Network/virtualHubs/*",
       "Microsoft.Network/virtualHubs/hubRouteTables/*"
     ],
