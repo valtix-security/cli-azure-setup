@@ -107,7 +107,8 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.CognitiveServices/*/read",
       "Microsoft.CognitiveServices/accounts/listkeys/action",
       "Microsoft.Network/virtualHubs/*",
-      "Microsoft.Network/virtualHubs/hubRouteTables/*"
+      "Microsoft.Network/virtualHubs/hubRouteTables/*",
+      "Microsoft.MarketplaceOrdering/offertypes/publishers/offers/plans/agreements/*"
     ],
     "AssignableScopes": [
         "/subscriptions/$sub_id"
@@ -227,8 +228,16 @@ for i in {1..10}; do
     fi
 done
 
-echo "Accept Marketplace agreements for Cisco Multicloud Defense Gateway Image"
+echo "Accept Marketplace agreements for Cisco Multicloud Defense Gateway Image old"
 mkt_rsp=$(az vm image terms accept --subscription $sub_id --publisher valtix --offer datapath --plan valtix_dp_image)
+terms_rsp=$(echo $mkt_rsp | jq -r .accepted)
+if [ "$terms_rsp" != "true" ]; then
+    echo -e "\033[31m** Marketplace terms could not be accepted\033[0m"
+    echo $mkt_rsp
+fi
+
+echo "Accept Marketplace agreements for Cisco Multicloud Defense Gateway Image new"
+mkt_rsp=$(az vm image terms accept --subscription $sub_id --publisher cisco --offer cisco-multicloud-defense --plan cisco-multicloud-defense-gateway-image-v2)
 terms_rsp=$(echo $mkt_rsp | jq -r .accepted)
 if [ "$terms_rsp" != "true" ]; then
     echo -e "\033[31m** Marketplace terms could not be accepted\033[0m"
