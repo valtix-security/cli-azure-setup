@@ -237,11 +237,11 @@ if [ "$terms_rsp" != "true" ]; then
 fi
 
 echo "Accept Marketplace agreements for Cisco Multicloud Defense Gateway Image new"
-mkt_rsp=$(az vm image terms accept --subscription $sub_id --publisher cisco --offer cisco-multicloud-defense --plan cisco-multicloud-defense-gateway-image-v2)
-terms_rsp=$(echo $mkt_rsp | jq -r .accepted)
+mkt_cisco_rsp=$(az vm image terms accept --subscription $sub_id --publisher cisco --offer cisco-multicloud-defense --plan cisco-multicloud-defense-gateway-image-v2)
+terms_rsp=$(echo $mkt_cisco_rsp | jq -r .accepted)
 if [ "$terms_rsp" != "true" ]; then
     echo -e "\033[31m** Marketplace terms could not be accepted\033[0m"
-    echo $mkt_rsp
+    echo $mkt_cisco_rsp
 fi
 
 echo "Accept Marketplace agreements for Cisco Firepower Threat Defense"
