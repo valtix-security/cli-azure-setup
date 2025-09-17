@@ -228,7 +228,7 @@ elif [ -z "$controller_role" ]; then
     echo ""
     
     if [[ "$REPLY" == "y" || "$REPLY" == "Y" ]]; then
-        echo "🔧 Creating new custom role: ciscomcd-controller-role"
+        echo "Creating new custom role: ciscomcd-controller-role"
         
         # Create new custom role
         create_custom_role
