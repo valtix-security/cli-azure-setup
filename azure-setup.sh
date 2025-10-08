@@ -109,7 +109,9 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.Network/virtualHubs/*",
       "Microsoft.Network/virtualHubs/hubRouteTables/*",
       "Microsoft.MarketplaceOrdering/offertypes/publishers/offers/plans/agreements/*",
-      "Microsoft.Storage/storageAccounts/read"
+      "Microsoft.Storage/storageAccounts/read",
+      "Microsoft.Authorization/roleAssignments/read",
+      "Microsoft.Authorization/roleDefinitions/read"
     ],
     "AssignableScopes": [
         "/subscriptions/$sub_id"
