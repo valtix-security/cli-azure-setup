@@ -111,7 +111,9 @@ cat > /tmp/role.json <<- EOF
       "Microsoft.MarketplaceOrdering/offertypes/publishers/offers/plans/agreements/*",
       "Microsoft.Storage/storageAccounts/read",
       "Microsoft.Authorization/roleAssignments/read",
-      "Microsoft.Authorization/roleDefinitions/read"
+      "Microsoft.Authorization/roleDefinitions/read",
+      "Microsoft.Network/networkVirtualAppliances/*",
+      "Microsoft.Network/networkVirtualApplianceSkus/read"
     ],
     "AssignableScopes": [
         "/subscriptions/$sub_id"
